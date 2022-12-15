@@ -23,31 +23,82 @@ def to_str(x):
 
 
 def is_float(x):
+    return to_float(x) != None
+
+
+def to_float(x):
     try:
-        float(x)
-        return True
+        f = float(x)
+        return f
     except:
-        return False
+        pass
+
+    for c in x:
+        if not c.isdigit() and c not in [",", "."]:
+            return None
+
+    commas = x.count(",")
+    dots = x.count(".")
+
+    if commas == 1 and dots == 0:
+        try:
+            x_comma = x.replace(",", ".")
+            x_comma_num = float(x_comma)
+            if x_comma_num != None:
+                return x_comma_num
+        except:
+            return None
+
+    if commas == 1 and dots == 1:
+        if x.rfind(".") > x.rfind(","):
+            x = x.replace(",", "")
+            try:
+                f = float(x)
+                return f
+            except:
+                pass
+        else:
+            x = x.replace(".", "")
+            x = x.replace(",", ".")
+            try:
+                f = float(x)
+                return f
+            except:
+                pass
+
+    if commas > 1 and dots == 0:
+        x = x.replace(",", "")
+        try:
+            f = float(x)
+            return f
+        except:
+            pass
+
+    if commas == 0 and dots > 1:
+        x = x.replace(".", "")
+        try:
+            f = float(x)
+            return f
+        except:
+            pass
+
+    try:
+        f = float(x)
+        return f
+    except:
+        return None
 
 
 def to_num(x):
     if is_float(x):
-        return float(x)
-
-    try:
-        x_comma = x.replace(",", ".")
-        x_comma_num = float(x_comma)
-        if x_comma_num != None:
-            return x_comma_num
-    except:
-        pass
+        return to_float(x)
 
     parts = x.split(" ")
     if len(parts) == 1:
         return None
 
     for p in parts:
-        pNum = to_num(p)
+        pNum = to_float(p)
         if pNum != None:
             return pNum
 
@@ -64,6 +115,10 @@ assert (to_num("2,43 EUR") == 2.43)
 assert (to_num("2.43 EUR") == 2.43)
 assert (to_num("EUR 2,43") == 2.43)
 assert (to_num("EUR 2.43") == 2.43)
+assert (to_num("5,898.20") == 5898.20)
+assert (to_num("5.898,20") == 5898.20)
+assert (to_num("5,898,20") == 589820)
+assert (to_num("5.898.20") == 589820)
 
 
 def is_iso_date(x):
@@ -79,10 +134,11 @@ def is_date(x):
 
 
 def is_excel_date(x):
-    if not is_float(x):
+    x = to_float(x)
+    if x == None:
         return False
 
-    x = to_excel_date(float(x))
+    x = to_excel_date(x)
     if 1900 <= x.year and x.year <= 2100:
         return True
 
@@ -97,7 +153,7 @@ def is_excel_date(x):
 
 def to_excel_date(excel_date_number):
     if isinstance(excel_date_number, str):
-        excel_date_number = float(excel_date_number)
+        excel_date_number = to_float(excel_date_number)
     return date(1899, 12, 30) + timedelta(days=excel_date_number)
 
 
