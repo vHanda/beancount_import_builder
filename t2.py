@@ -17,12 +17,48 @@ def is_str(x):
     return isinstance(x, str) and not is_num(x)
 
 
-def is_num(x):
+def is_float(x):
     try:
         float(x)
         return True
     except:
         return False
+
+
+def to_num(x):
+    if is_float(x):
+        return float(x)
+
+    try:
+        x_comma = x.replace(",", ".")
+        x_comma_num = float(x_comma)
+        if x_comma_num != None:
+            return x_comma_num
+    except:
+        pass
+
+    parts = x.split(" ")
+    if len(parts) == 1:
+        return None
+
+    for p in parts:
+        pNum = to_num(p)
+        if pNum != None:
+            return pNum
+
+    return None
+
+
+def is_num(x):
+    return to_num(x) != None
+
+
+assert (to_num("2.43") == 2.43)
+assert (to_num("2,43") == 2.43)
+assert (to_num("2,43 EUR") == 2.43)
+assert (to_num("2.43 EUR") == 2.43)
+assert (to_num("EUR 2,43") == 2.43)
+assert (to_num("EUR 2.43") == 2.43)
 
 
 def is_iso_date(x):
@@ -38,7 +74,7 @@ def is_date(x):
 
 
 def is_excel_date(x):
-    if not is_num(x):
+    if not is_float(x):
         return False
 
     x = to_excel_date(float(x))
