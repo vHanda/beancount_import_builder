@@ -205,54 +205,58 @@ def build_txn(base_txn: Transaction, date_arg, narration, payee, meta0, meta1, m
     return txn
 
 
+def build_importer(input_str, output_str):
+    parts = input_str.strip().split(",")
+    # parts = [x for x in parts if x != ""]
+    # parts = list(dict.fromkeys(parts))
+    parts.append("EUR")
+
+    # Not sure if empty strings and duplicates should be removed
+
+    print(parts)
+
+    base_txn = parse_txn(output_str)
+    expected_output = printer.format_entry(base_txn).strip()
+
+    for m in fetch_matches(parts):
+        assert (len(m) == 8)
+
+        date_arg = to_excel_date(float(parts[m[0]])) if m[0] != -1 else None
+        narration_arg = str(parts[m[1]]) if m[1] != -1 else None
+        payee_arg = str(parts[m[2]]) if m[2] != -1 else None
+        meta_0_arg = str(parts[m[3]]) if m[3] != -1 else None
+        meta_1_arg = str(parts[m[4]]) if m[4] != -1 else None
+        meta_2_arg = str(parts[m[5]]) if m[5] != -1 else None
+        posting_units_number = Decimal(parts[m[6]]) if m[6] != -1 else None
+        posting_units_currency = str(parts[m[7]]) if m[7] != -1 else None
+
+        if date_arg == None:
+            continue
+        if narration_arg == None:
+            continue
+        if posting_units_number == None:
+            continue
+        if posting_units_currency == None or posting_units_currency == "":
+            continue
+        if ' ' in posting_units_currency:
+            continue
+
+        new_txn = build_txn(
+            base_txn, date_arg, narration_arg, payee_arg, meta_0_arg, meta_1_arg, meta_2_arg, posting_units_number, posting_units_currency
+        )
+        actual_output = printer.format_entry(new_txn).strip()
+
+        if actual_output == expected_output:
+            print("Matched")
+            print(actual_output)
+            print(m)
+            return m
+
+
 input_str = "44715.0,44715.0,BIZUM ENVIADO,,-30.0,2097.06"
-
-parts = input_str.split(",")
-# parts = [x for x in parts if x != ""]
-# parts = list(dict.fromkeys(parts))
-parts.append("EUR")
-
-# Not sure if empty strings and duplicates should be removed
-
-print(parts)
-
-
-expected_output = """
+output_str = """
 2022-06-03 * "BIZUM ENVIADO"
-  Assets:Personal:Spain:LaCaixa  -30.0 EUR
-""".strip()
+    Assets:Personal:Spain:LaCaixa  -30.0 EUR
+"""
 
-base_txn = parse_txn(expected_output)
-
-
-for m in fetch_matches(parts):
-    assert (len(m) == 8)
-
-    date_arg = to_excel_date(float(parts[m[0]])) if m[0] != -1 else None
-    narration_arg = str(parts[m[1]]) if m[1] != -1 else None
-    payee_arg = str(parts[m[2]]) if m[2] != -1 else None
-    meta_0_arg = str(parts[m[3]]) if m[3] != -1 else None
-    meta_1_arg = str(parts[m[4]]) if m[4] != -1 else None
-    meta_2_arg = str(parts[m[5]]) if m[5] != -1 else None
-    posting_units_number = Decimal(parts[m[6]]) if m[6] != -1 else None
-    posting_units_currency = str(parts[m[7]]) if m[7] != -1 else None
-
-    if date_arg == None:
-        continue
-    if narration_arg == None:
-        continue
-    if posting_units_number == None:
-        continue
-    if posting_units_currency == None:
-        continue
-
-    new_txn = build_txn(
-        base_txn, date_arg, narration_arg, payee_arg, meta_0_arg, meta_1_arg, meta_2_arg, posting_units_number, posting_units_currency
-    )
-    actual_output = printer.format_entry(new_txn).strip()
-
-    if actual_output == expected_output:
-        print("Matched")
-        print(actual_output)
-        print(m)
-        break
+build_importer(input_str, output_str)
