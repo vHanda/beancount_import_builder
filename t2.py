@@ -133,6 +133,37 @@ def to_currency(x):
     return to_str(x)
 
 
+assert (is_currency("EUR"))
+assert (is_currency("VUSA2"))
+assert (is_currency("VUSA 2") == False)
+
+# An account name is a colon-separated list of capitalized words which begin with a letter
+
+
+def is_account(x):
+    if not is_str(x):
+        return False
+
+    s = to_str(x)
+    if s == None or s == "":
+        return False
+    if ':' not in s:
+        return False
+
+    words = s.split(':')
+    for w in words:
+        if not w.isalnum():
+            return False
+        if not w[0].isalpha():
+            return False
+
+    return True
+
+
+def to_currency(x):
+    return to_str(x)
+
+
 def fetch_fn_indexes(parts, fn):
     indexes = [-1]
     i = 0
@@ -157,6 +188,10 @@ def fetch_str_i(parts):
 
 def fetch_currency_i(parts):
     return fetch_fn_indexes(parts, is_currency)
+
+
+def fetch_account_i(parts):
+    return fetch_fn_indexes(parts, is_account)
 
 
 """
@@ -210,7 +245,7 @@ def fetch_matches(parts):
     meta0_args = fetch_str_i(parts)
     meta1_args = fetch_str_i(parts)
     meta2_args = fetch_str_i(parts)
-    posting_account_args = fetch_str_i(parts)
+    posting_account_args = fetch_account_i(parts)
     posting_units_numbers_args = fetch_decimal_i(parts)
     posting_units_currency_args = fetch_currency_i(parts)
 
@@ -328,7 +363,7 @@ def build_importer(input_str, output_str):
             continue
         if narration_arg == None or narration_arg == "":
             continue
-        if posting_account == None or posting_account == "" or ":" not in posting_account:
+        if posting_account == None:
             continue
         if posting_units_number == None:
             continue
