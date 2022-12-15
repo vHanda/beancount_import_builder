@@ -7,6 +7,7 @@ import beancount.core.data
 import beancount.loader
 import itertools
 import copy
+import csv
 
 from datetime import date, timedelta
 
@@ -14,7 +15,11 @@ cp = beancount.core.data.create_simple_posting
 
 
 def is_str(x):
-    return isinstance(x, str) and not is_num(x)
+    return isinstance(x, str) and not is_float(x)
+
+
+def to_str(x):
+    return str(x).strip()
 
 
 def is_float(x):
@@ -97,10 +102,14 @@ def to_excel_date(excel_date_number):
 
 
 def to_date(x):
+    if is_float(x):
+        return to_excel_date(x)
     if is_str(x):
         return date.fromisoformat(x)
-    if is_num(x):
-        return to_excel_date(x)
+
+
+assert (to_date("2011-02-01") == date(2011, 2, 1))
+assert (to_date("44715.0") == date(2022, 6, 3))
 
 
 def fetch_fn_indexes(parts, fn):
@@ -149,26 +158,6 @@ num -
 # def is_amount(x): "EUR 2,34" "2,34 EUR"
 
 
-"""
-404-7319078-6347502,3 Scale Home Brew Hydrometer Wine Beer Cider Alcohol Testing Making Tester; ,Vishesh Handa,2019-06-24,"EUR 2,34",N/A,N/A,N/A,N/A,
-
-->
-
-Figure out the inputs -
-1. Assume everything is an input
-
-For this input, create a function that takes a lot of inputs and creates a transaction
-
-"""
-
-
-input_s = """
-2019-06-24 * "3 Scale Home Brew Hydrometer Wine Beer Cider Alcohol Testing Making Tester;"
-  orderId: "404-7319078-6347502"
-  Expenses:Personal:Amazon  -2.34 EUR
-"""
-
-
 def parse_txn(input_s):
     r = beancount.loader.load_string(input_s)
 
@@ -201,6 +190,15 @@ def fetch_matches(parts):
     posting_units_currency_args = fetch_str_i(parts)
 
     return itertools.product(date_args, narration_args, payee_args, meta0_args, meta1_args, meta2_args, posting_account_args, posting_units_numbers_args, posting_units_currency_args)
+
+
+def anydup(thelist):
+    seen = set()
+    for x in thelist:
+        if x in seen:
+            return True
+        seen.add(x)
+    return False
 
 
 def build_txn(base_txn: Transaction, date_arg, narration, payee, meta0, meta1, meta2, posting_account, posting_units_number, posting_units_currency):
@@ -259,11 +257,22 @@ def fetch_accounts(txn: Transaction):
     return txn.postings[0].account
 
 
+def anydup(thelist):
+    seen = set()
+    for x in thelist:
+        if x == -1:
+            continue
+        if x in seen:
+            return True
+        seen.add(x)
+    return False
+
+
 def build_importer(input_str, output_str):
     base_txn = parse_txn(output_str)
     expected_output = printer.format_entry(base_txn).strip()
 
-    parts = input_str.strip().split(",")
+    parts = next(csv.reader([input_str.strip()]))
     # parts = [x for x in parts if x != ""]
     # parts = list(dict.fromkeys(parts))
     # Not sure if empty strings and duplicates should be removed
@@ -276,19 +285,23 @@ def build_importer(input_str, output_str):
     for m in fetch_matches(parts):
         assert (len(m) == 9)
 
-        date_arg = to_date(float(parts[m[0]])) if m[0] != -1 else None
-        narration_arg = str(parts[m[1]]) if m[1] != -1 else None
-        payee_arg = str(parts[m[2]]) if m[2] != -1 else None
-        meta_0_arg = str(parts[m[3]]) if m[3] != -1 else None
-        meta_1_arg = str(parts[m[4]]) if m[4] != -1 else None
-        meta_2_arg = str(parts[m[5]]) if m[5] != -1 else None
-        posting_account = str(parts[m[6]]) if m[6] != -1 else None
-        posting_units_number = Decimal(parts[m[7]]) if m[7] != -1 else None
-        posting_units_currency = str(parts[m[8]]) if m[8] != -1 else None
+        if anydup(m):
+            continue
+
+        date_arg = to_date(parts[m[0]]) if m[0] != -1 else None
+        narration_arg = to_str(parts[m[1]]) if m[1] != -1 else None
+        payee_arg = to_str(parts[m[2]]) if m[2] != -1 else None
+        meta_0_arg = to_str(parts[m[3]]) if m[3] != -1 else None
+        meta_1_arg = to_str(parts[m[4]]) if m[4] != -1 else None
+        meta_2_arg = to_str(parts[m[5]]) if m[5] != -1 else None
+        posting_account = to_str(parts[m[6]]) if m[6] != -1 else None
+        posting_units_number = Decimal(
+            to_str(to_num(parts[m[7]]))) if m[7] != -1 else None
+        posting_units_currency = to_str(parts[m[8]]) if m[8] != -1 else None
 
         if date_arg == None:
             continue
-        if narration_arg == None:
+        if narration_arg == None or narration_arg == "":
             continue
         if posting_account == None or posting_account == "" or ":" not in posting_account:
             continue
@@ -297,6 +310,10 @@ def build_importer(input_str, output_str):
         if posting_units_currency == None or posting_units_currency == "":
             continue
         if ' ' in posting_units_currency:
+            continue
+        if '-' in posting_units_currency:
+            continue
+        if posting_units_currency.islower():
             continue
 
         new_txn = build_txn(
@@ -319,3 +336,20 @@ output_str = """
 """
 
 build_importer(input_str, output_str)
+
+
+input_str = """
+404-7319078-6347502,3 Scale Home Brew Hydrometer Wine Beer Cider Alcohol Testing Making Tester; ,Vishesh Handa,2019-06-24,"EUR 2,34",N/A,N/A,N/A,N/A,
+"""
+
+input_str = input_str.replace("N/A", "")
+
+output_str = """
+2019-06-24 * "3 Scale Home Brew Hydrometer Wine Beer Cider Alcohol Testing Making Tester;"
+  orderId: "404-7319078-6347502"
+  Expenses:Personal:Amazon  2.34 EUR
+"""
+
+build_importer(input_str, output_str)
+
+# FIXME: Check which of the 9 arguments are actually used and avoid generating permutations for the rest
