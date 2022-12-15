@@ -55,7 +55,16 @@ def is_excel_date(x):
 
 
 def to_excel_date(excel_date_number):
+    if isinstance(excel_date_number, str):
+        excel_date_number = float(excel_date_number)
     return date(1899, 12, 30) + timedelta(days=excel_date_number)
+
+
+def to_date(x):
+    if is_str(x):
+        return date.fromisoformat(x)
+    if is_num(x):
+        return to_excel_date(x)
 
 
 def fetch_fn_indexes(parts, fn):
@@ -231,7 +240,7 @@ def build_importer(input_str, output_str):
     for m in fetch_matches(parts):
         assert (len(m) == 9)
 
-        date_arg = to_excel_date(float(parts[m[0]])) if m[0] != -1 else None
+        date_arg = to_date(float(parts[m[0]])) if m[0] != -1 else None
         narration_arg = str(parts[m[1]]) if m[1] != -1 else None
         payee_arg = str(parts[m[2]]) if m[2] != -1 else None
         meta_0_arg = str(parts[m[3]]) if m[3] != -1 else None
