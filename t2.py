@@ -112,6 +112,27 @@ assert (to_date("2011-02-01") == date(2011, 2, 1))
 assert (to_date("44715.0") == date(2022, 6, 3))
 
 
+def is_currency(x):
+    if not is_str(x):
+        return False
+
+    s = to_str(x)
+    if s == None or s == "":
+        return False
+    if not s.isalnum():
+        return False
+    if s.islower():
+        return False
+    if not s[0].isalpha():
+        return False
+
+    return True
+
+
+def to_currency(x):
+    return to_str(x)
+
+
 def fetch_fn_indexes(parts, fn):
     indexes = [-1]
     i = 0
@@ -132,6 +153,10 @@ def fetch_decimal_i(parts):
 
 def fetch_str_i(parts):
     return fetch_fn_indexes(parts, is_str)
+
+
+def fetch_currency_i(parts):
+    return fetch_fn_indexes(parts, is_currency)
 
 
 """
@@ -187,7 +212,7 @@ def fetch_matches(parts):
     meta2_args = fetch_str_i(parts)
     posting_account_args = fetch_str_i(parts)
     posting_units_numbers_args = fetch_decimal_i(parts)
-    posting_units_currency_args = fetch_str_i(parts)
+    posting_units_currency_args = fetch_currency_i(parts)
 
     return itertools.product(date_args, narration_args, payee_args, meta0_args, meta1_args, meta2_args, posting_account_args, posting_units_numbers_args, posting_units_currency_args)
 
@@ -307,13 +332,7 @@ def build_importer(input_str, output_str):
             continue
         if posting_units_number == None:
             continue
-        if posting_units_currency == None or posting_units_currency == "":
-            continue
-        if ' ' in posting_units_currency:
-            continue
-        if '-' in posting_units_currency:
-            continue
-        if posting_units_currency.islower():
+        if posting_units_currency == None:
             continue
 
         new_txn = build_txn(
