@@ -151,14 +151,14 @@ def fetch_matches(parts):
     meta0_args = fetch_str_i(parts)
     meta1_args = fetch_str_i(parts)
     meta2_args = fetch_str_i(parts)
+    posting_account_args = fetch_str_i(parts)
     posting_units_numbers_args = fetch_decimal_i(parts)
     posting_units_currency_args = fetch_str_i(parts)
 
-    return itertools.product(date_args, narration_args, payee_args, meta0_args, meta1_args, meta2_args, posting_units_numbers_args, posting_units_currency_args)
+    return itertools.product(date_args, narration_args, payee_args, meta0_args, meta1_args, meta2_args, posting_account_args, posting_units_numbers_args, posting_units_currency_args)
 
 
-# 8 inputs
-def build_txn(base_txn: Transaction, date_arg, narration, payee, meta0, meta1, meta2, posting_units_number, posting_units_currency):
+def build_txn(base_txn: Transaction, date_arg, narration, payee, meta0, meta1, meta2, posting_account, posting_units_number, posting_units_currency):
 
     assert (isinstance(date_arg, date))
     assert (isinstance(narration, str))
@@ -198,6 +198,7 @@ def build_txn(base_txn: Transaction, date_arg, narration, payee, meta0, meta1, m
 
     assert (len(txn.postings) == 1)
     posting = txn.postings[0]
+    posting = posting._replace(account=posting_account)
     posting = posting._replace(units=Amount(
         posting_units_number, posting_units_currency))
     txn = txn._replace(postings=[posting])
@@ -205,21 +206,30 @@ def build_txn(base_txn: Transaction, date_arg, narration, payee, meta0, meta1, m
     return txn
 
 
+def fetch_currencies(txn: Transaction):
+    return txn.postings[0].units.currency
+
+
+def fetch_accounts(txn: Transaction):
+    return txn.postings[0].account
+
+
 def build_importer(input_str, output_str):
+    base_txn = parse_txn(output_str)
+    expected_output = printer.format_entry(base_txn).strip()
+
     parts = input_str.strip().split(",")
     # parts = [x for x in parts if x != ""]
     # parts = list(dict.fromkeys(parts))
-    parts.append("EUR")
-
     # Not sure if empty strings and duplicates should be removed
 
     print(parts)
 
-    base_txn = parse_txn(output_str)
-    expected_output = printer.format_entry(base_txn).strip()
+    parts.append(fetch_currencies(base_txn))
+    parts.append(fetch_accounts(base_txn))
 
     for m in fetch_matches(parts):
-        assert (len(m) == 8)
+        assert (len(m) == 9)
 
         date_arg = to_excel_date(float(parts[m[0]])) if m[0] != -1 else None
         narration_arg = str(parts[m[1]]) if m[1] != -1 else None
@@ -227,12 +237,15 @@ def build_importer(input_str, output_str):
         meta_0_arg = str(parts[m[3]]) if m[3] != -1 else None
         meta_1_arg = str(parts[m[4]]) if m[4] != -1 else None
         meta_2_arg = str(parts[m[5]]) if m[5] != -1 else None
-        posting_units_number = Decimal(parts[m[6]]) if m[6] != -1 else None
-        posting_units_currency = str(parts[m[7]]) if m[7] != -1 else None
+        posting_account = str(parts[m[6]]) if m[6] != -1 else None
+        posting_units_number = Decimal(parts[m[7]]) if m[7] != -1 else None
+        posting_units_currency = str(parts[m[8]]) if m[8] != -1 else None
 
         if date_arg == None:
             continue
         if narration_arg == None:
+            continue
+        if posting_account == None or posting_account == "" or ":" not in posting_account:
             continue
         if posting_units_number == None:
             continue
@@ -242,7 +255,8 @@ def build_importer(input_str, output_str):
             continue
 
         new_txn = build_txn(
-            base_txn, date_arg, narration_arg, payee_arg, meta_0_arg, meta_1_arg, meta_2_arg, posting_units_number, posting_units_currency
+            base_txn, date_arg, narration_arg, payee_arg, meta_0_arg, meta_1_arg, meta_2_arg,
+            posting_account, posting_units_number, posting_units_currency
         )
         actual_output = printer.format_entry(new_txn).strip()
 
