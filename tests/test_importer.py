@@ -44,3 +44,18 @@ Dividend (Ordinary),2022-04-06 07:39:19,IE00B3XXRP09,VUSA,"Vanguard S&P 500 ETF"
   Assets:N26  2.36 EUR
 """
     assert build_importer(input_str, output_str) != None
+
+
+def test_5():
+    input_str = """
+Deposit,2022-03-10 07:39:09,,,,,,,,1000.00,,,1000.00,"Bank Transfer",40459ed3-7f6c-442d-a288-1fcf7ca0a73b,
+"""
+    output_str = """
+2022-03-10 * "Deposit" "Bank Transfer"
+  id: "40459ed3-7f6c-442d-a288-1fcf7ca0a73b"
+  Assets:N26  1000.0 EUR
+"""
+    assert build_importer(input_str, output_str) != None
+
+
+# FIXME: 1000.00 EUR fails

@@ -241,6 +241,7 @@ def build_importer(input_str, output_str):
             posting_units_currency,
         )
         actual_output = printer.format_entry(new_txn).strip()
+        # print(actual_output)
 
         if actual_output == expected_output:
             print("Matched")
