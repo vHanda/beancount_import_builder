@@ -24,4 +24,5 @@ def test_to_date():
 def test_is_currency():
     assert is_currency("EUR")
     assert is_currency("VUSA2")
+    assert is_currency("Deposit") == False
     assert is_currency("VUSA 2") == False

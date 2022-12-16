@@ -180,7 +180,7 @@ def is_currency(x):
         return False
     if not s.isalnum():
         return False
-    if s.islower():
+    if not s.isupper():
         return False
     if not s[0].isalpha():
         return False
