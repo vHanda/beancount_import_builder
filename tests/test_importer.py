@@ -11,7 +11,6 @@ def test_1():
 
 
 def test_2():
-
     input_str = """
 404-7319078-6347502,3 Scale Home Brew Hydrometer Wine Beer Cider Alcohol Testing Making Tester; ,Vishesh Handa,2019-06-24,"EUR 2,34",N/A,N/A,N/A,N/A,
 """

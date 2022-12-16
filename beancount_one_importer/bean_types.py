@@ -200,10 +200,10 @@ def is_account(x):
     s = to_str(x)
     if s == None or s == "":
         return False
-    if ':' not in s:
+    if ":" not in s:
         return False
 
-    words = s.split(':')
+    words = s.split(":")
     for w in words:
         if not w.isalnum():
             return False

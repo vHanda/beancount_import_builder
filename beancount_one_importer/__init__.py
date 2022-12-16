@@ -72,18 +72,18 @@ def parse_txn(input_s):
     r = beancount.loader.load_string(input_s)
 
     txns = r[0]
-    assert (len(txns) == 1)
+    assert len(txns) == 1
     txn = txns[0]
 
     meta = txn.meta
     meta.pop("filename")
     meta.pop("lineno")
-    meta.pop('__tolerances__')
+    meta.pop("__tolerances__")
 
     txn = txn._replace(meta=meta)
 
     postings = txn.postings
-    assert (len(postings) == 1)
+    assert len(postings) == 1
 
     return txn
 
@@ -99,19 +99,40 @@ def fetch_matches(parts):
     posting_units_numbers_args = fetch_decimal_i(parts)
     posting_units_currency_args = fetch_currency_i(parts)
 
-    return itertools.product(date_args, narration_args, payee_args, meta0_args, meta1_args, meta2_args, posting_account_args, posting_units_numbers_args, posting_units_currency_args)
+    return itertools.product(
+        date_args,
+        narration_args,
+        payee_args,
+        meta0_args,
+        meta1_args,
+        meta2_args,
+        posting_account_args,
+        posting_units_numbers_args,
+        posting_units_currency_args,
+    )
 
 
-def build_txn(base_txn: Transaction, date_arg, narration, payee, meta0, meta1, meta2, posting_account, posting_units_number, posting_units_currency):
+def build_txn(
+    base_txn: Transaction,
+    date_arg,
+    narration,
+    payee,
+    meta0,
+    meta1,
+    meta2,
+    posting_account,
+    posting_units_number,
+    posting_units_currency,
+):
 
-    assert (isinstance(date_arg, date))
-    assert (isinstance(narration, str))
-    assert (isinstance(payee, str) or payee is None)
-    assert (isinstance(meta0, str) or meta0 is None)
-    assert (isinstance(meta1, str) or meta1 is None)
-    assert (isinstance(meta2, str) or meta2 is None)
-    assert (isinstance(posting_units_number, Decimal))
-    assert (isinstance(posting_units_currency, str))
+    assert isinstance(date_arg, date)
+    assert isinstance(narration, str)
+    assert isinstance(payee, str) or payee is None
+    assert isinstance(meta0, str) or meta0 is None
+    assert isinstance(meta1, str) or meta1 is None
+    assert isinstance(meta2, str) or meta2 is None
+    assert isinstance(posting_units_number, Decimal)
+    assert isinstance(posting_units_currency, str)
 
     txn = copy.deepcopy(base_txn)
     txn = txn._replace(date=date_arg)
@@ -140,11 +161,12 @@ def build_txn(base_txn: Transaction, date_arg, narration, payee, meta0, meta1, m
         meta_i += 1
     txn = txn._replace(meta=meta)
 
-    assert (len(txn.postings) == 1)
+    assert len(txn.postings) == 1
     posting = txn.postings[0]
     posting = posting._replace(account=posting_account)
-    posting = posting._replace(units=Amount(
-        posting_units_number, posting_units_currency))
+    posting = posting._replace(
+        units=Amount(posting_units_number, posting_units_currency)
+    )
     txn = txn._replace(postings=[posting])
 
     return txn
@@ -184,7 +206,7 @@ def build_importer(input_str, output_str):
     parts.append(fetch_accounts(base_txn))
 
     for m in fetch_matches(parts):
-        assert (len(m) == 9)
+        assert len(m) == 9
 
         if anydup(m):
             continue
@@ -196,8 +218,7 @@ def build_importer(input_str, output_str):
         meta_1_arg = to_str(parts[m[4]]) if m[4] != -1 else None
         meta_2_arg = to_str(parts[m[5]]) if m[5] != -1 else None
         posting_account = to_str(parts[m[6]])
-        posting_units_number = Decimal(
-            to_str(to_num(parts[m[7]])))
+        posting_units_number = Decimal(to_str(to_num(parts[m[7]])))
         posting_units_currency = to_str(parts[m[8]])
 
         if narration_arg == "":
@@ -208,8 +229,16 @@ def build_importer(input_str, output_str):
             continue
 
         new_txn = build_txn(
-            base_txn, date_arg, narration_arg, payee_arg, meta_0_arg, meta_1_arg, meta_2_arg,
-            posting_account, posting_units_number, posting_units_currency
+            base_txn,
+            date_arg,
+            narration_arg,
+            payee_arg,
+            meta_0_arg,
+            meta_1_arg,
+            meta_2_arg,
+            posting_account,
+            posting_units_number,
+            posting_units_currency,
         )
         actual_output = printer.format_entry(new_txn).strip()
 
@@ -220,6 +249,7 @@ def build_importer(input_str, output_str):
             return m
 
     return None
+
 
 # FIXME: Check which of the 9 arguments are actually used and avoid generating permutations for the rest
 # FIXME: Move anydup into fetch_matches
