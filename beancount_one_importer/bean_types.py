@@ -135,7 +135,7 @@ def is_excel_date(x):
         return False
 
     x = to_excel_date(x)
-    if 1900 <= x.year and x.year <= 2100:
+    if 2000 <= x.year and x.year <= 2100:
         return True
 
     return False
