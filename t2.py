@@ -221,7 +221,7 @@ def to_currency(x):
 
 
 def fetch_fn_indexes(parts, fn):
-    indexes = [-1]
+    indexes = []
     i = 0
     while i < len(parts):
         if fn(parts[i]):
@@ -297,10 +297,10 @@ def parse_txn(input_s):
 def fetch_matches(parts):
     date_args = fetch_date_i(parts)
     narration_args = fetch_str_i(parts)
-    payee_args = fetch_str_i(parts)
-    meta0_args = fetch_str_i(parts)
-    meta1_args = fetch_str_i(parts)
-    meta2_args = fetch_str_i(parts)
+    payee_args = [-1] + fetch_str_i(parts)
+    meta0_args = [-1] + fetch_str_i(parts)
+    meta1_args = [-1] + fetch_str_i(parts)
+    meta2_args = [-1] + fetch_str_i(parts)
     posting_account_args = fetch_account_i(parts)
     posting_units_numbers_args = fetch_decimal_i(parts)
     posting_units_currency_args = fetch_currency_i(parts)
@@ -404,26 +404,22 @@ def build_importer(input_str, output_str):
         if anydup(m):
             continue
 
-        date_arg = to_date(parts[m[0]]) if m[0] != -1 else None
-        narration_arg = to_str(parts[m[1]]) if m[1] != -1 else None
+        date_arg = to_date(parts[m[0]])
+        narration_arg = to_str(parts[m[1]])
         payee_arg = to_str(parts[m[2]]) if m[2] != -1 else None
         meta_0_arg = to_str(parts[m[3]]) if m[3] != -1 else None
         meta_1_arg = to_str(parts[m[4]]) if m[4] != -1 else None
         meta_2_arg = to_str(parts[m[5]]) if m[5] != -1 else None
-        posting_account = to_str(parts[m[6]]) if m[6] != -1 else None
+        posting_account = to_str(parts[m[6]])
         posting_units_number = Decimal(
-            to_str(to_num(parts[m[7]]))) if m[7] != -1 else None
-        posting_units_currency = to_str(parts[m[8]]) if m[8] != -1 else None
+            to_str(to_num(parts[m[7]])))
+        posting_units_currency = to_str(parts[m[8]])
 
-        if date_arg == None:
+        if narration_arg == "":
             continue
-        if narration_arg == None or narration_arg == "":
+        if posting_account == "":
             continue
-        if posting_account == None:
-            continue
-        if posting_units_number == None:
-            continue
-        if posting_units_currency == None:
+        if posting_units_currency == "":
             continue
 
         new_txn = build_txn(
