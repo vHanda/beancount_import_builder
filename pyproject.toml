@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "beancount-import-builder"
+version = "0.1.0"
+description = "Create a beancounter importer by examples"
+authors = ["Vishesh Handa <me@vhanda.in>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [{include = "beancount_import_builder"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
