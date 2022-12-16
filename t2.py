@@ -329,15 +329,6 @@ def fetch_matches(parts):
     return itertools.product(date_args, narration_args, payee_args, meta0_args, meta1_args, meta2_args, posting_account_args, posting_units_numbers_args, posting_units_currency_args)
 
 
-def anydup(thelist):
-    seen = set()
-    for x in thelist:
-        if x in seen:
-            return True
-        seen.add(x)
-    return False
-
-
 def build_txn(base_txn: Transaction, date_arg, narration, payee, meta0, meta1, meta2, posting_account, posting_units_number, posting_units_currency):
 
     assert (isinstance(date_arg, date))
