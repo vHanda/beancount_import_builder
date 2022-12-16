@@ -9,7 +9,7 @@ import itertools
 import copy
 import csv
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 cp = beancount.core.data.create_simple_posting
 
@@ -130,7 +130,22 @@ def is_iso_date(x):
 
 
 def is_date(x):
-    return is_excel_date(x) or is_iso_date(x)
+    standard_date = is_excel_date(x) or is_iso_date(x)
+    if standard_date:
+        return True
+
+    try:
+        # 01-Feb-2011
+        datetime.strptime(x, "%d-%b-%Y").date()
+        return True
+    except:
+        pass
+
+    return False
+    #
+    # 18-06-2022
+    # 18/06/2022
+    #
 
 
 def is_excel_date(x):
@@ -142,12 +157,6 @@ def is_excel_date(x):
     if 1900 <= x.year and x.year <= 2100:
         return True
 
-    #
-    # 01-Feb-2011
-    # 18-06-2022
-    # 18/06/2022
-    # 2022-06-18
-    #
     return False
 
 
@@ -160,12 +169,24 @@ def to_excel_date(excel_date_number):
 def to_date(x):
     if is_float(x):
         return to_excel_date(x)
-    if is_str(x):
+    if not is_str(x):
+        return None
+
+    try:
         return date.fromisoformat(x)
+    except:
+        pass
+
+    try:
+        # 01-Feb-2011
+        return datetime.strptime(x, "%d-%b-%Y").date()
+    except:
+        pass
 
 
 assert (to_date("2011-02-01") == date(2011, 2, 1))
 assert (to_date("44715.0") == date(2022, 6, 3))
+assert (to_date("18-Feb-2020") == date(2020, 2, 18))
 
 
 def is_currency(x):
@@ -459,3 +480,16 @@ output_str = """
 build_importer(input_str, output_str)
 
 # FIXME: Check which of the 9 arguments are actually used and avoid generating permutations for the rest
+
+input_str = """
+01-Feb-2011,31-Jan-2011, ,Credit Interest Capitalised,"","787.00","5,898.20"
+"""
+
+output_str = """
+2011-02-01 * "Credit Interest Capitalised"
+  Assets:Personal:India:CanaraBank  787.0 INR
+"""
+
+build_importer(input_str, output_str)
+
+# FIXME: Move anydup into fetch_matches
