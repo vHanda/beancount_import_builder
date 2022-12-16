@@ -1,14 +1,15 @@
 [tool.poetry]
-name = "beancount-import-builder"
+name = "beancount_one_importer"
 version = "0.1.0"
-description = "Create a beancounter importer by examples"
+description = "The one beancount importer to rule them all"
 authors = ["Vishesh Handa <me@vhanda.in>"]
 license = "Apache-2.0"
 readme = "README.md"
-packages = [{include = "beancount_import_builder"}]
+packages = [{include = "beancount_one_importer"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+beancount = "^2.3.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
