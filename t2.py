@@ -141,7 +141,13 @@ def is_date(x):
     except:
         pass
 
-    return False
+    try:
+        # 2022-04-06 07:39:19
+        datetime.strptime(x, "%Y-%m-%d %H:%M:%S").date()
+        return True
+    except:
+        pass
+
     #
     # 18-06-2022
     # 18/06/2022
@@ -183,10 +189,17 @@ def to_date(x):
     except:
         pass
 
+    try:
+        # 2022-04-06 07:39:19
+        return datetime.strptime(x, "%Y-%m-%d %H:%M:%S").date()
+    except:
+        pass
+
 
 assert (to_date("2011-02-01") == date(2011, 2, 1))
 assert (to_date("44715.0") == date(2022, 6, 3))
 assert (to_date("18-Feb-2020") == date(2020, 2, 18))
+assert (to_date("2022-04-06 07:39:19") == date(2022, 4, 6))
 
 
 def is_currency(x):
@@ -484,3 +497,15 @@ output_str = """
 build_importer(input_str, output_str)
 
 # FIXME: Move anydup into fetch_matches
+
+input_str = """
+Dividend (Ordinary),2022-04-06 07:39:19,IE00B3XXRP09,VUSA,"Vanguard S&P 500 ETF",10.0000000000,0.20,GBP,Not available,2.36,-0.00,GBP,,,,
+"""
+
+output_str = """
+2022-04-06 * "Dividend (Ordinary)" "Vanguard S&P 500 ETF"
+  isin: "IE00B3XXRP09"
+  Assets:N26  2.36 EUR
+"""
+
+build_importer(input_str, output_str)
