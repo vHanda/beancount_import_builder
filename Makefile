@@ -1,4 +1,7 @@
 test:
 	poetry run pytest
 
-.PHONY: test
+fmt:
+	poetry run black .
+
+.PHONY: test fmt
