@@ -53,7 +53,7 @@ Deposit,2022-03-10 07:39:09,,,,,,,,1000.00,,,1000.00,"Bank Transfer",40459ed3-7f
     output_str = """
 2022-03-10 * "Deposit" "Bank Transfer"
   id: "40459ed3-7f6c-442d-a288-1fcf7ca0a73b"
-  Assets:N26  1000.0 EUR
+  Assets:N26  1000.00 EUR
 """
     assert build_importer(input_str, output_str) != None
 

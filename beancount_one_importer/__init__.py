@@ -68,8 +68,7 @@ num -
 # Figure out how to match the currency
 # def is_amount(x): "EUR 2,34" "2,34 EUR"
 
-
-def fetch_matches(parts):
+def fetch_matches(parts, include_posting_cost=False):
     date_args = fetch_date_i(parts)
     narration_args = fetch_str_i(parts)
     payee_args = [-1] + fetch_str_i(parts)
@@ -153,14 +152,6 @@ def build_txn(
     return txn
 
 
-def fetch_currencies(txn):
-    return txn.postings[0].units.currency
-
-
-def fetch_accounts(txn):
-    return txn.postings[0].account
-
-
 def anydup(thelist):
     seen = set()
     for x in thelist:
@@ -172,22 +163,15 @@ def anydup(thelist):
     return False
 
 
-def build_importer(input_str, output_str):
-    base_txn = parse_txn(output_str)
-    expected_output = printer.format_entry(base_txn).strip()
+def build_importer(input_str, output_str, single_currency=True):
+    base_txn, dContext = parse_txn(output_str)
+    expected_output = serialize_txn(base_txn, dContext)
 
     parts = next(csv.reader([input_str.strip()]))
-    # parts = [x for x in parts if x != ""]
-    # parts = list(dict.fromkeys(parts))
-    # Not sure if empty strings and duplicates should be removed
-
     print(parts)
 
-    parts.append(fetch_currencies(base_txn))
-    parts.append(fetch_accounts(base_txn))
-
-    for m in fetch_matches(parts):
-        assert len(m) == 9
+    parts = parts + fetch_currencies(base_txn)
+    parts = parts + fetch_accounts(base_txn)
 
         if anydup(m):
             continue
@@ -221,7 +205,7 @@ def build_importer(input_str, output_str):
             posting_units_number,
             posting_units_currency,
         )
-        actual_output = serialize_txn(new_txn)
+        actual_output = serialize_txn(new_txn, dContext)
         # print(actual_output)
 
         if actual_output == expected_output:
