@@ -1,25 +1,29 @@
 from datetime import date, datetime, timedelta
 
 
-def is_str(x):
+def is_str(x) -> bool:
     return isinstance(x, str) and not is_float(x)
 
 
-def to_str(x):
+def to_str(x) -> str:
     return str(x).strip()
 
 
-def is_float(x):
+def is_float(x) -> bool:
     return to_float(x) != None
 
 
-def to_float(x):
+def to_float(inp: str | float) -> float | None:
     try:
-        f = float(x)
+        if isinstance(inp, float):
+            f = inp
+        else:
+            f = float(inp)
         return f
     except:
         pass
 
+    x = str(inp).strip()
     for c in x:
         if not c.isdigit() and c not in [",", "."]:
             return None
@@ -129,21 +133,29 @@ def is_date(x):
     #
 
 
-def is_excel_date(x):
-    x = to_float(x)
+def is_excel_date(input: str | float):
+    x = to_float(input)
     if x == None:
         return False
 
-    x = to_excel_date(x)
-    if 2000 <= x.year and x.year <= 2100:
+    dt = to_excel_date(x)
+    if dt == None:
+        return False
+    if 2000 <= dt.year and dt.year <= 2100:
         return True
 
     return False
 
 
-def to_excel_date(excel_date_number):
-    if isinstance(excel_date_number, str):
-        excel_date_number = to_float(excel_date_number)
+def to_excel_date(input: float | str):
+    if input == None:
+        return None
+    elif isinstance(input, str):
+        excel_date_number = to_float(input)
+        if excel_date_number == None:
+            return None
+    else:
+        excel_date_number = input
     return date(1899, 12, 30) + timedelta(days=excel_date_number)
 
 
@@ -211,7 +223,3 @@ def is_account(x):
             return False
 
     return True
-
-
-def to_currency(x):
-    return to_str(x)

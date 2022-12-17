@@ -113,7 +113,7 @@ def fetch_matches(parts):
 
 
 def build_txn(
-    base_txn: Transaction,
+    base_txn,
     date_arg,
     narration,
     payee,
@@ -172,11 +172,11 @@ def build_txn(
     return txn
 
 
-def fetch_currencies(txn: Transaction):
+def fetch_currencies(txn):
     return txn.postings[0].units.currency
 
 
-def fetch_accounts(txn: Transaction):
+def fetch_accounts(txn):
     return txn.postings[0].account
 
 
