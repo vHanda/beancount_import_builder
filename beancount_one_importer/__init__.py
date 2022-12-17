@@ -12,6 +12,7 @@ import csv
 from datetime import date
 
 from .bean_types import *
+from .codec import *
 
 
 def fetch_fn_indexes(parts, fn):
@@ -66,26 +67,6 @@ num -
 
 # Figure out how to match the currency
 # def is_amount(x): "EUR 2,34" "2,34 EUR"
-
-
-def parse_txn(input_s):
-    r = beancount.loader.load_string(input_s)
-
-    txns = r[0]
-    assert len(txns) == 1
-    txn = txns[0]
-
-    meta = txn.meta
-    meta.pop("filename")
-    meta.pop("lineno")
-    meta.pop("__tolerances__")
-
-    txn = txn._replace(meta=meta)
-
-    postings = txn.postings
-    assert len(postings) == 1
-
-    return txn
 
 
 def fetch_matches(parts):
@@ -240,7 +221,7 @@ def build_importer(input_str, output_str):
             posting_units_number,
             posting_units_currency,
         )
-        actual_output = printer.format_entry(new_txn).strip()
+        actual_output = serialize_txn(new_txn)
         # print(actual_output)
 
         if actual_output == expected_output:
