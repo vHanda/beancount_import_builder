@@ -1,4 +1,4 @@
-from beancount.core.data import Account, Amount, Posting, Currency, Transaction
+from beancount.core.data import Account, Amount, Posting, Currency, Transaction, Cost
 from beancount.core import flags
 from beancount.core.number import Decimal
 from beancount.parser import printer
@@ -65,8 +65,6 @@ num -
 # Remove quotes and then case changes
 # Trim spaces
 
-# Figure out how to match the currency
-# def is_amount(x): "EUR 2,34" "2,34 EUR"
 
 def fetch_matches(parts, include_posting_cost=False):
     date_args = fetch_date_i(parts)
@@ -78,6 +76,8 @@ def fetch_matches(parts, include_posting_cost=False):
     posting_account_args = fetch_account_i(parts)
     posting_units_numbers_args = fetch_decimal_i(parts)
     posting_units_currency_args = fetch_currency_i(parts)
+    posting_cost_number_args = [-1] + fetch_decimal_i(parts)
+    posting_cost_currency_args = [-1] + fetch_currency_i(parts)
 
     return itertools.product(
         date_args,
@@ -89,6 +89,8 @@ def fetch_matches(parts, include_posting_cost=False):
         posting_account_args,
         posting_units_numbers_args,
         posting_units_currency_args,
+        posting_cost_number_args if include_posting_cost else [-1],
+        posting_cost_currency_args if include_posting_cost else [-1],
     )
 
 
@@ -103,6 +105,8 @@ def build_txn(
     posting_account,
     posting_units_number,
     posting_units_currency,
+    posting_cost_number,
+    posting_cost_currency,
 ):
 
     assert isinstance(date_arg, date)
@@ -113,6 +117,8 @@ def build_txn(
     assert isinstance(meta2, str) or meta2 is None
     assert isinstance(posting_units_number, Decimal)
     assert isinstance(posting_units_currency, str)
+    assert isinstance(posting_cost_number, Decimal) or posting_cost_number is None
+    assert isinstance(posting_cost_currency, str) or posting_cost_currency is None
 
     txn = copy.deepcopy(base_txn)
     txn = txn._replace(date=date_arg)
@@ -147,6 +153,17 @@ def build_txn(
     posting = posting._replace(
         units=Amount(posting_units_number, posting_units_currency)
     )
+    if (
+        posting.cost != None
+        and posting_cost_number != None
+        and posting_cost_currency != None
+    ):
+        posting = posting._replace(
+            cost=posting.cost._replace(
+                number=posting_cost_number,
+                currency=posting_cost_currency,
+            )
+        )
     txn = txn._replace(postings=[posting])
 
     return txn
@@ -173,6 +190,8 @@ def build_importer(input_str, output_str, single_currency=True):
     parts = parts + fetch_currencies(base_txn)
     parts = parts + fetch_accounts(base_txn)
 
+    # Pass the base_txn
+    for m in fetch_matches(parts, include_posting_cost=(single_currency == False)):
         if anydup(m):
             continue
 
@@ -185,12 +204,21 @@ def build_importer(input_str, output_str, single_currency=True):
         posting_account = to_str(parts[m[6]])
         posting_units_number = Decimal(to_str(to_num(parts[m[7]])))
         posting_units_currency = to_str(parts[m[8]])
+        posting_cost_number = (
+            Decimal(to_str(to_num(parts[m[9]]))) if m[9] != -1 else None
+        )
+        posting_cost_currency = to_str(parts[m[10]]) if m[10] != -1 else None
 
         if narration_arg == "":
             continue
         if posting_account == "":
             continue
         if posting_units_currency == "":
+            continue
+
+        if single_currency and (
+            posting_cost_number != None or posting_cost_currency != None
+        ):
             continue
 
         new_txn = build_txn(
@@ -204,6 +232,8 @@ def build_importer(input_str, output_str, single_currency=True):
             posting_account,
             posting_units_number,
             posting_units_currency,
+            posting_cost_number,
+            posting_cost_currency,
         )
         actual_output = serialize_txn(new_txn, dContext)
         # print(actual_output)
