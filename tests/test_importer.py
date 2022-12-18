@@ -68,4 +68,4 @@ Market buy,2022-03-11 13:39:01,IE00B3XXRP09,VUSA,"Vanguard S&P 500 ETF",10.00000
   id: "EOF1828459892"
   Assets:N26  10.00 VUSA {{ 744.47 EUR }}
 """
-    assert build_importer(input_str, output_str, single_currency=False) != None
+    assert build_importer(input_str, output_str) != None

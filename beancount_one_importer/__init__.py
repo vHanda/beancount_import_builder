@@ -66,7 +66,7 @@ num -
 # Trim spaces
 
 
-def fetch_matches(parts, include_posting_cost=False):
+def fetch_matches(parts):
     date_args = fetch_date_i(parts)
     narration_args = fetch_str_i(parts)
     payee_args = [-1] + fetch_str_i(parts)
@@ -89,8 +89,8 @@ def fetch_matches(parts, include_posting_cost=False):
         posting_account_args,
         posting_units_numbers_args,
         posting_units_currency_args,
-        posting_cost_number_args if include_posting_cost else [-1],
-        posting_cost_currency_args if include_posting_cost else [-1],
+        posting_cost_number_args,
+        posting_cost_currency_args,
     )
 
 
@@ -180,18 +180,22 @@ def anydup(thelist):
     return False
 
 
-def build_importer(input_str, output_str, single_currency=True):
+def parse_csv_line(line):
+    return next(csv.reader([line.strip()]))
+
+
+def build_importer(input_str, output_str):
     base_txn, dContext = parse_txn(output_str)
     expected_output = serialize_txn(base_txn, dContext)
 
-    parts = next(csv.reader([input_str.strip()]))
+    parts = parse_csv_line(input_str)
     print(parts)
 
     parts = parts + fetch_currencies(base_txn)
     parts = parts + fetch_accounts(base_txn)
 
     # Pass the base_txn
-    for m in fetch_matches(parts, include_posting_cost=(single_currency == False)):
+    for m in fetch_matches(parts):
         if anydup(m):
             continue
 
@@ -214,11 +218,6 @@ def build_importer(input_str, output_str, single_currency=True):
         if posting_account == "":
             continue
         if posting_units_currency == "":
-            continue
-
-        if single_currency and (
-            posting_cost_number != None or posting_cost_currency != None
-        ):
             continue
 
         new_txn = build_txn(
