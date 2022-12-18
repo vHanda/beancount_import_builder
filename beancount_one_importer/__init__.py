@@ -66,34 +66,6 @@ num -
 # Trim spaces
 
 
-def fetch_matches(parts):
-    date_args = fetch_date_i(parts)
-    narration_args = fetch_str_i(parts)
-    payee_args = [-1] + fetch_str_i(parts)
-    meta0_args = [-1] + fetch_str_i(parts)
-    meta1_args = [-1] + fetch_str_i(parts)
-    meta2_args = [-1] + fetch_str_i(parts)
-    posting_account_args = fetch_account_i(parts)
-    posting_units_numbers_args = fetch_decimal_i(parts)
-    posting_units_currency_args = fetch_currency_i(parts)
-    posting_cost_number_args = [-1] + fetch_decimal_i(parts)
-    posting_cost_currency_args = [-1] + fetch_currency_i(parts)
-
-    return itertools.product(
-        date_args,
-        narration_args,
-        payee_args,
-        meta0_args,
-        meta1_args,
-        meta2_args,
-        posting_account_args,
-        posting_units_numbers_args,
-        posting_units_currency_args,
-        posting_cost_number_args,
-        posting_cost_currency_args,
-    )
-
-
 def build_txn(
     base_txn,
     date_arg,
@@ -115,6 +87,7 @@ def build_txn(
     assert isinstance(meta0, str) or meta0 is None
     assert isinstance(meta1, str) or meta1 is None
     assert isinstance(meta2, str) or meta2 is None
+    assert isinstance(posting_account, str)
     assert isinstance(posting_units_number, Decimal)
     assert isinstance(posting_units_currency, str)
     assert isinstance(posting_cost_number, Decimal) or posting_cost_number is None
@@ -169,19 +142,27 @@ def build_txn(
     return txn
 
 
-def anydup(thelist):
-    seen = set()
-    for x in thelist:
-        if x == -1:
-            continue
-        if x in seen:
-            return True
-        seen.add(x)
-    return False
-
-
 def parse_csv_line(line):
     return next(csv.reader([line.strip()]))
+
+
+def find_match(parts, expected_val, args, fetch_value_fn):
+    if expected_val == None:
+        return (-1, None)
+
+    for partsIndex in args:
+        arg = fetch_value_fn(parts[partsIndex]) if partsIndex != -1 else None
+        if arg == expected_val:
+            return (partsIndex, arg)
+
+    return (-1, None)
+
+
+def get_meta_index(base_txn, i):
+    meta_keys = list(base_txn.meta.keys())
+    if i >= len(meta_keys):
+        return -1
+    return base_txn.meta[meta_keys[i]]
 
 
 def build_importer(input_str, output_str):
@@ -189,62 +170,86 @@ def build_importer(input_str, output_str):
     expected_output = serialize_txn(base_txn, dContext)
 
     parts = parse_csv_line(input_str)
-    print(parts)
 
-    parts = parts + fetch_currencies(base_txn)
-    parts = parts + fetch_accounts(base_txn)
+    meta_keys = list(base_txn.meta.keys())
+    posting = base_txn.postings[0]
 
-    # Pass the base_txn
-    for m in fetch_matches(parts):
-        if anydup(m):
-            continue
+    # FIXME: Avoid reusing an index already used, except for -1
 
-        date_arg = to_date(parts[m[0]])
-        narration_arg = to_str(parts[m[1]])
-        payee_arg = to_str(parts[m[2]]) if m[2] != -1 else None
-        meta_0_arg = to_str(parts[m[3]]) if m[3] != -1 else None
-        meta_1_arg = to_str(parts[m[4]]) if m[4] != -1 else None
-        meta_2_arg = to_str(parts[m[5]]) if m[5] != -1 else None
-        posting_account = to_str(parts[m[6]])
-        posting_units_number = Decimal(to_str(to_num(parts[m[7]])))
-        posting_units_currency = to_str(parts[m[8]])
-        posting_cost_number = (
-            Decimal(to_str(to_num(parts[m[9]]))) if m[9] != -1 else None
-        )
-        posting_cost_currency = to_str(parts[m[10]]) if m[10] != -1 else None
+    date_i, date_v = find_match(parts, base_txn.date, fetch_date_i(parts), to_date)
+    narration_i, narration_v = find_match(
+        parts, base_txn.narration, fetch_str_i(parts), to_str
+    )
+    payee_i, payee_v = find_match(
+        parts, base_txn.payee, [-1] + fetch_str_i(parts), to_str
+    )
+    meta_0_i, meta_0_v = find_match(
+        parts, get_meta_index(base_txn, 0), [-1] + fetch_str_i(parts), to_str
+    )
+    meta_1_i, meta_1_v = find_match(
+        parts, get_meta_index(base_txn, 1), [-1] + fetch_str_i(parts), to_str
+    )
+    meta_2_i, meta_2_v = find_match(
+        parts, get_meta_index(base_txn, 2), [-1] + fetch_str_i(parts), to_str
+    )
+    posting_account_i, posting_account_v = find_match(
+        parts + fetch_accounts(base_txn),
+        posting.account,
+        fetch_account_i(parts + fetch_accounts(base_txn)),
+        to_str,
+    )
+    posting_units_number_i, posting_units_number_v = find_match(
+        parts, posting.units.number, fetch_decimal_i(parts), to_decimal
+    )
+    posting_units_currency_i, posting_units_currency_v = find_match(
+        parts + fetch_currencies(base_txn),
+        posting.units.currency,
+        fetch_currency_i(parts + fetch_currencies(base_txn)),
+        to_str,
+    )
+    cost = posting.cost
+    cost_number = cost.number if cost != None else None
+    cost_currency = cost.currency if cost != None else None
+    posting_cost_number_i, posting_cost_number_v = find_match(
+        parts, cost_number, fetch_decimal_i(parts), to_decimal
+    )
+    posting_cost_currency_i, posting_cost_currency_v = find_match(
+        parts + fetch_currencies(base_txn),
+        cost_currency,
+        fetch_currency_i(parts + fetch_currencies(base_txn)),
+        to_str,
+    )
 
-        if narration_arg == "":
-            continue
-        if posting_account == "":
-            continue
-        if posting_units_currency == "":
-            continue
-
-        new_txn = build_txn(
-            base_txn,
-            date_arg,
-            narration_arg,
-            payee_arg,
-            meta_0_arg,
-            meta_1_arg,
-            meta_2_arg,
-            posting_account,
-            posting_units_number,
-            posting_units_currency,
-            posting_cost_number,
-            posting_cost_currency,
-        )
-        actual_output = serialize_txn(new_txn, dContext)
-        # print(actual_output)
-
-        if actual_output == expected_output:
-            print("Matched")
-            print(actual_output)
-            print(m)
-            return m
-
-    return None
-
-
-# FIXME: Check which of the 9 arguments are actually used and avoid generating permutations for the rest
-# FIXME: Move anydup into fetch_matches
+    new_txn = build_txn(
+        base_txn,
+        date_v,
+        narration_v,
+        payee_v,
+        meta_0_v,
+        meta_1_v,
+        meta_2_v,
+        posting_account_v,
+        posting_units_number_v,
+        posting_units_currency_v,
+        posting_cost_number_v,
+        posting_cost_currency_v,
+    )
+    actual_output = serialize_txn(new_txn, dContext)
+    if actual_output != expected_output:
+        return None
+    match = (
+        date_i,
+        narration_i,
+        payee_i,
+        meta_0_i,
+        meta_1_i,
+        meta_2_i,
+        posting_account_i,
+        posting_units_number_i,
+        posting_units_currency_i,
+        posting_cost_number_i,
+        posting_cost_currency_i,
+    )
+    print("Matched")
+    print(match)
+    return match

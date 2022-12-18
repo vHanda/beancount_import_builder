@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from beancount.core.number import Decimal
 
 
 def is_str(x) -> bool:
@@ -7,6 +8,10 @@ def is_str(x) -> bool:
 
 def to_str(x) -> str:
     return str(x).strip()
+
+
+def to_decimal(x) -> Decimal:
+    return Decimal(to_str(to_num(x)))
 
 
 def is_float(x) -> bool:
